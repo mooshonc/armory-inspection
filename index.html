@@ -913,20 +913,75 @@
             };
             
             // Add new settlement
-            const addSettlement = () => {
-                if (!newSettlementName.trim()) {
-                    showToast('נא להזין שם ישוב');
-                    return;
-                }
-                const id = newSettlementName.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_\u0590-\u05ff]/g, '');
-                const newSettlement = { id: id + '_' + Date.now(), name: newSettlementName.trim() };
-                const updatedSettlements = [...settlements, newSettlement];
-                setSettlements(updatedSettlements);
-                saveSettlements(updatedSettlements);
-                setNewSettlementName('');
-                setShowAddSettlement(false);
-                showToast('הישוב נוסף בהצלחה!');
-            };
+const addSettlement = () => {
+    if (!newSettlementName.trim()) {
+        showToast('נא להזין שם ישוב');
+        return;
+    }
+
+    const id = newSettlementName
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_\u0590-\u05ff]/g, '');
+
+    const newSettlement = { id: id + '_' + Date.now(), name: newSettlementName.trim() };
+    const updatedSettlements = [...settlements, newSettlement];
+
+    setSettlements(updatedSettlements);
+    saveSettlements(updatedSettlements);
+    setNewSettlementName('');
+    setShowAddSettlement(false);
+    showToast('הישוב נוסף בהצלחה!');
+};
+// Edit settlement name
+const editSettlement = (id) => {
+    const settlement = settlements.find(s => s.id === id);
+    if (!settlement) return;
+
+    const newName = window.prompt('הזן שם חדש לישוב', settlement.name);
+    if (newName === null) return; // המשתמש לחץ ביטול
+
+    const trimmed = newName.trim();
+    if (!trimmed) {
+        showToast('שם הישוב לא יכול להיות ריק');
+        return;
+    }
+
+    const updatedSettlements = settlements.map(s =>
+        s.id === id ? { ...s, name: trimmed } : s
+    );
+
+    setSettlements(updatedSettlements);
+    saveSettlements(updatedSettlements);
+    showToast('שם הישוב עודכן');
+};
+
+// Delete settlement
+const deleteSettlementEntry = (id) => {
+    if (settlements.length <= 1) {
+        showToast('לא ניתן למחוק את הישוב האחרון');
+        return;
+    }
+
+    const settlement = settlements.find(s => s.id === id);
+    if (!settlement) return;
+
+    const confirmed = window.confirm(`האם למחוק את הישוב "${settlement.name}"?`);
+    if (!confirmed) return;
+
+    const updatedSettlements = settlements.filter(s => s.id !== id);
+    setSettlements(updatedSettlements);
+    saveSettlements(updatedSettlements);
+
+    if (currentSettlement === id) {
+        setCurrentSettlement(null);
+        localStorage.removeItem('selectedSettlement');
+    }
+
+    showToast('הישוב נמחק');
+};
+
 
             useEffect(() => {
                 const handleOnline = () => setIsOnline(true);
@@ -1176,54 +1231,88 @@
                                 בחר ישוב
                             </h2>
                             <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-                                {settlements.map(settlement => (
-                                    <button
-                                        key={settlement.id}
-                                        className="btn-primary"
-                                        onClick={() => selectSettlement(settlement.id)}
-                                        style={{textAlign: 'center'}}
-                                    >
-                                        {settlement.name}
-                                    </button>
-                                ))}
-                                
-                                {!showAddSettlement ? (
-                                    <button
-                                        className="btn-secondary"
-                                        onClick={() => setShowAddSettlement(true)}
-                                        style={{textAlign: 'center'}}
-                                    >
-                                        + הוסף ישוב חדש
-                                    </button>
-                                ) : (
-                                    <div style={{display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px'}}>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            placeholder="שם הישוב"
-                                            value={newSettlementName}
-                                            onChange={(e) => setNewSettlementName(e.target.value)}
-                                            autoFocus
-                                        />
-                                        <div style={{display: 'flex', gap: '8px'}}>
-                                            <button
-                                                className="btn-primary"
-                                                onClick={addSettlement}
-                                                style={{flex: 1}}
-                                            >
-                                                הוסף
-                                            </button>
-                                            <button
-                                                className="btn-secondary"
-                                                onClick={() => {setShowAddSettlement(false); setNewSettlementName('');}}
-                                                style={{flex: 1, marginTop: 0}}
-                                            >
-                                                ביטול
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+    {settlements.map(settlement => (
+        <div
+            key={settlement.id}
+            style={{display: 'flex', gap: '8px', alignItems: 'center'}}
+        >
+            {/* בחירת יישוב */}
+            <button
+                className="btn-primary"
+                onClick={() => selectSettlement(settlement.id)}
+                style={{flex: 1, textAlign: 'center'}}
+            >
+                {settlement.name}
+            </button>
+
+            {/* עריכת שם */}
+            <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => editSettlement(settlement.id)}
+                style={{width: '64px', padding: '8px', marginTop: 0, fontSize: '0.8rem'}}
+            >
+                ערוך
+            </button>
+
+            {/* מחיקת יישוב */}
+            <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => deleteSettlementEntry(settlement.id)}
+                style={{
+                    width: '64px',
+                    padding: '8px',
+                    marginTop: 0,
+                    fontSize: '0.8rem',
+                    borderColor: 'var(--danger)',
+                    color: 'var(--danger)'
+                }}
+            >
+                מחק
+            </button>
+        </div>
+    ))}
+
+    {/* החלק של הוספת יישוב חדש נשאר כמו שהוא */}
+    {!showAddSettlement ? (
+        <button
+            className="btn-secondary"
+            onClick={() => setShowAddSettlement(true)}
+            style={{textAlign: 'center'}}
+        >
+            + הוסף ישוב חדש
+        </button>
+    ) : (
+        <div style={{display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px'}}>
+            <input
+                type="text"
+                className="form-input"
+                placeholder="שם הישוב"
+                value={newSettlementName}
+                onChange={(e) => setNewSettlementName(e.target.value)}
+                autoFocus
+            />
+            <div style={{display: 'flex', gap: '8px'}}>
+                <button
+                    className="btn-primary"
+                    onClick={addSettlement}
+                    style={{flex: 1}}
+                >
+                    הוסף
+                </button>
+                <button
+                    className="btn-secondary"
+                    onClick={() => {setShowAddSettlement(false); setNewSettlementName('');}}
+                    style={{flex: 1, marginTop: 0}}
+                >
+                    ביטול
+                </button>
+            </div>
+        </div>
+    )}
+</div>
+
                         </div>
                         {toast && <div className="toast">{toast}</div>}
                     </div>
