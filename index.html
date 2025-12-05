@@ -1808,10 +1808,51 @@ ${selectedInspection.notes ? 'הערות: ' + selectedInspection.notes : ''}`;
                                                     const shareData = { title: 'ביקורת נשקייה', text: text };
                                                     
                                                     if (selectedInspection.photo) {
-                                                        const response = await fetch(selectedInspection.photo);
-                                                        const blob = await response.blob();
+                                                        // Create image with text overlay
+                                                        const img = new Image();
+                                                        img.src = selectedInspection.photo;
+                                                        await new Promise(resolve => img.onload = resolve);
+                                                        
+                                                        const canvas = document.createElement('canvas');
+                                                        canvas.width = img.width;
+                                                        canvas.height = img.height;
+                                                        const ctx = canvas.getContext('2d');
+                                                        
+                                                        // Draw original image
+                                                        ctx.drawImage(img, 0, 0);
+                                                        
+                                                        // Add semi-transparent background for text
+                                                        const lines = [
+                                                            `ביקורת נשקייה - ${getSettlementName()}`,
+                                                            `תאריך: ${formatDate(selectedInspection.date)} | שעה: ${selectedInspection.time}`,
+                                                            `${selectedInspection.type === 'before' ? 'לפני חצות' : 'אחרי חצות'}`,
+                                                            `שם: ${selectedInspection.name} | תפקיד: ${selectedInspection.role}`,
+                                                            selectedInspection.notes ? `הערות: ${selectedInspection.notes}` : ''
+                                                        ].filter(l => l);
+                                                        
+                                                        const fontSize = Math.max(16, Math.floor(img.width / 30));
+                                                        const lineHeight = fontSize * 1.4;
+                                                        const padding = 10;
+                                                        const boxHeight = lines.length * lineHeight + padding * 2;
+                                                        
+                                                        // Dark background at top
+                                                        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                                                        ctx.fillRect(0, 0, img.width, boxHeight);
+                                                        
+                                                        // Text
+                                                        ctx.font = `bold ${fontSize}px Heebo, Arial`;
+                                                        ctx.fillStyle = 'yellow';
+                                                        ctx.textAlign = 'right';
+                                                        
+                                                        lines.forEach((line, i) => {
+                                                            ctx.fillText(line, img.width - padding, padding + (i + 1) * lineHeight - 5);
+                                                        });
+                                                        
+                                                        // Convert to blob
+                                                        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
                                                         const file = new File([blob], 'inspection.jpg', { type: 'image/jpeg' });
                                                         shareData.files = [file];
+                                                        delete shareData.text; // Remove text since it's on the image
                                                     }
                                                     
                                                     await navigator.share(shareData);
