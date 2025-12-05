@@ -1792,26 +1792,75 @@ const deleteSettlementEntry = (id) => {
                                     {selectedInspection.notes && <div><strong>הערות:</strong> {selectedInspection.notes}</div>}
                                 </div>
                                 
-                                <button 
-                                    onClick={() => {
-                                        handleDeleteInspection(selectedInspection.id);
-                                        setSelectedInspection(null);
-                                    }}
-                                    style={{
-                                        width: '100%',
-                                        marginTop: '16px',
-                                        padding: '12px',
-                                        background: 'var(--danger)',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        color: 'white',
-                                        fontFamily: 'Heebo, sans-serif',
-                                        fontSize: '1rem',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    🗑️ מחק ביקורת
-                                </button>
+                                <div style={{display: 'flex', gap: '8px', marginTop: '16px'}}>
+                                    <button 
+                                        onClick={async () => {
+                                            const text = `ביקורת נשקייה - ${getSettlementName()}
+תאריך: ${formatDate(selectedInspection.date)}
+שעה: ${selectedInspection.time}
+סוג: ${selectedInspection.type === 'before' ? 'לפני חצות' : 'אחרי חצות'}
+שם: ${selectedInspection.name}
+תפקיד: ${selectedInspection.role}
+${selectedInspection.notes ? 'הערות: ' + selectedInspection.notes : ''}`;
+                                            
+                                            try {
+                                                if (navigator.share) {
+                                                    const shareData = { title: 'ביקורת נשקייה', text: text };
+                                                    
+                                                    if (selectedInspection.photo) {
+                                                        const response = await fetch(selectedInspection.photo);
+                                                        const blob = await response.blob();
+                                                        const file = new File([blob], 'inspection.jpg', { type: 'image/jpeg' });
+                                                        shareData.files = [file];
+                                                    }
+                                                    
+                                                    await navigator.share(shareData);
+                                                } else {
+                                                    await navigator.clipboard.writeText(text);
+                                                    showToast('הטקסט הועתק ללוח');
+                                                }
+                                            } catch (err) {
+                                                if (err.name !== 'AbortError') {
+                                                    showToast('שגיאה בשיתוף');
+                                                }
+                                            }
+                                        }}
+                                        style={{
+                                            flex: 1,
+                                            padding: '12px',
+                                            background: 'var(--accent)',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            color: 'var(--bg-dark)',
+                                            fontFamily: 'Heebo, sans-serif',
+                                            fontSize: '1rem',
+                                            fontWeight: '600',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        📤 שתף
+                                    </button>
+                                    
+                                    <button 
+                                        onClick={() => {
+                                            handleDeleteInspection(selectedInspection.id);
+                                            setSelectedInspection(null);
+                                        }}
+                                        style={{
+                                            flex: 1,
+                                            padding: '12px',
+                                            background: 'var(--danger)',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            color: 'white',
+                                            fontFamily: 'Heebo, sans-serif',
+                                            fontSize: '1rem',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        🗑️ מחק
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
